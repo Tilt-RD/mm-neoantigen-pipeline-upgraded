@@ -1,6 +1,55 @@
 # Multiple Myeloma Neoantigen Vaccine Pipeline
 
-A computational pipeline for designing personalized mRNA cancer vaccines targeting multiple myeloma (MM), using open-access genomic data from the [MMRF CoMMpass Study](https://themmrf.org/we-are-curing-multiple-myeloma/mmrf-commpass-study/) via the [NCI Genomic Data Commons (GDC)](https://portal.gdc.cancer.gov/).
+A computational pipeline for exploring neoantigen candidates in multiple myeloma (MM), using open-access genomic data from the [MMRF CoMMpass Study](https://themmrf.org/we-are-curing-multiple-myeloma/mmrf-commpass-study/) via the [NCI Genomic Data Commons (GDC)](https://portal.gdc.cancer.gov/).
+
+> **This is a research prototype, not a vaccine design tool.** It produces
+> ranked candidate lists and a representative construct layout. It has had no
+> wet-lab validation of any kind, and the sections below set out exactly which
+> parts are implemented and which are placeholders. If you are a patient or
+> carer who has found this repository while looking for treatment, nothing here
+> is a therapy or a route to one; please talk to your haematology team.
+
+## Status: what runs, and what does not
+
+Honest accounting, because the previous version of this README did not
+distinguish these and that made the repository hard to evaluate.
+
+### Implemented and working
+
+- GDC API retrieval of MMRF CoMMpass somatic mutations and clinical data
+- Mutation filtering to protein-altering variants, with mutant peptide generation
+- MHC-I binding prediction via MHCflurry, including class II peptide lengths
+- Candidate ranking, epitope selection and construct assembly
+- An epitope-level benchmark (`benchmark_epitopes.py`) that scores documented
+  neoantigens against their own restricting HLA allele
+- A Streamlit dashboard for browsing results
+
+### Stubbed, approximate, or not implemented
+
+| Component | Actual state |
+| --- | --- |
+| **Patient HLA typing** | Not implemented. `config.yaml` names arcasHLA and OptiType, but the code always falls back to population-frequency priors for European ancestry. **Nothing this pipeline outputs is personalised to an individual**, because the allele set is a demographic assumption. Real typing from the CoMMpass RNA-seq is the single most important missing piece. |
+| **Built-in PSSM predictor** | A teaching-grade approximation with matrices for four alleles only (A\*02:01, A\*01:01, A\*03:01, B\*07:02). Not comparable to a trained predictor. Install MHCflurry; without it, affinity numbers are not interpretable. |
+| **Ensemble weighting** | The 0.7/0.3 split between MHCflurry and PSSM is a choice made for this repository, not a validated scheme. Read the per-predictor columns. |
+| **COSMIC and IEDB annotation** | Offline dictionaries hand-built in `external_validation.py`. No API calls are made, so the counts reported in validation summaries describe that local file, not a database query. |
+| **3' UTR sequence** | A 43-nucleotide placeholder. It is labelled in `config.yaml` as the published AES-mtRNR1 design; it is not that sequence. Do not treat any construct output as a real UTR architecture. |
+| **Self-similarity safety screen** | Compares against a short hardcoded gene list, not the human proteome. It is not a tolerance or autoimmunity screen in any meaningful sense. |
+| **Secondary validation cohort** | None. Previously configured as "TCGA-MM", which does not exist. |
+| **Selection pressure (dN/dS)** | Disabled. Previously carried fifteen invented per-gene constants. |
+
+### Known limits of the approach
+
+Multiple myeloma has a low mutational burden. Across 664 CoMMpass patients the
+mean was 63.9 missense mutations, 23.5 predicted neoantigens and **9.4
+expressed neoantigens** per patient
+([Miller et al., Blood Cancer Journal, 2017](https://www.nature.com/articles/bcj201794)).
+The default config asks for 5 to 20 epitopes per construct, so for a typical
+patient there is barely a shortlist to rank. A better binding predictor does not
+fix this; the constraint is antigen supply. Myeloma-specific sources that this
+pipeline does **not** currently model, and that would matter more than predictor
+accuracy, include the clonal immunoglobulin idiotype, IGH translocation
+breakpoint peptides, and selection by clonal persistence across the serial
+CoMMpass timepoints.
 
 ## Pipeline Overview
 
@@ -81,21 +130,32 @@ The pipeline uses the **MMRF CoMMpass Study** (~995 newly diagnosed MM patients)
 ### Neoantigen Selection
 Mutations are filtered to protein-altering variants (missense, frameshift, indels) and scored by:
 - Physicochemical distance between wildtype and mutant amino acids
-- Known MM driver gene status (KRAS, NRAS, BRAF, TP53, etc.)
-- MHC-I binding affinity (IC50) across common HLA alleles
+- Known MM driver gene status (KRAS, NRAS, BRAF, TP53, etc.), by membership of the `driver_genes` list in `config.yaml`
+- MHC-I binding affinity (IC50) across the configured HLA panel, which is a population prior rather than a patient's genotype
 - Agretopicity (mutant vs wildtype binding ratio)
 - Foreignness score
 
+The dN/dS selection-pressure term is disabled. It previously added a bonus
+derived from fifteen hardcoded per-gene constants that had no source, so any
+ranking produced with it was shaped by invented numbers. To restore it, run
+`dndscv` against the MMRF MAF and use its real output, or take driver status
+from OncoKB or IntOGen.
+
 ### mRNA Vaccine Design
-The construct follows established mRNA vaccine architecture:
-- **5' Cap** — m7G Cap1 structure
+The construct output follows the general *layout* of a published mRNA vaccine
+architecture. It is a schematic, not a manufacturable sequence:
+
+- **5' Cap** — m7G Cap1 structure (recorded as an annotation, not at sequence level)
 - **5' UTR** — Human alpha-globin derived
 - **Signal peptide** — Human tPA leader sequence
 - **Epitope cassette** — Ordered epitopes joined by GSG linkers
-- **3' UTR** — AES-mtRNR1 combination (BioNTech design)
+- **3' UTR** — **placeholder, 43 nt.** `config.yaml` labels this as the
+  AES-mtRNR1 combination used in published BioNTech constructs. It is not that
+  sequence. Every construct this pipeline emits carries a stub here.
 - **Poly-A tail** — 120 nucleotides
-- **Modification** — N1-methylpseudouridine (m1Ψ) replacing all uridines
-- **Codon optimization** — Human codon usage bias
+- **Modification** — N1-methylpseudouridine (m1Ψ) substitution is recorded as an
+  annotation; no chemistry is modelled
+- **Codon optimization** — Human codon usage bias, with optional GC balancing
 
 ## Dependencies
 
@@ -104,7 +164,35 @@ The construct follows established mRNA vaccine architecture:
 - requests (GDC API access)
 - scikit-learn
 - PyYAML, tqdm
-- **Optional:** [MHCflurry](https://github.com/openvax/mhcflurry) for production-grade binding predictions
+- **[MHCflurry](https://github.com/openvax/mhcflurry) — effectively required.** It is
+  listed as optional because the pipeline will run without it, but the built-in
+  PSSM fallback covers four alleles and is a rough approximation, so affinity
+  numbers produced without MHCflurry should not be interpreted:
+
+  ```bash
+  pip install mhcflurry
+  mhcflurry-downloads fetch models_class1_presentation
+  ```
+
+## Validating a change
+
+Run the epitope-level benchmark. It scores documented neoantigens against the
+HLA allele each is actually restricted to, and takes seconds:
+
+```bash
+python benchmark_epitopes.py
+```
+
+At the time of writing it recovers 2 of 4 experimentally-sourced epitopes at the
+500 nM threshold. Read the misses rather than the ratio. One is KRAS G12D on
+HLA-C\*08:02, where the clinical evidence is strong but affinity predictors are
+substantially weaker on HLA-C than on HLA-A and HLA-B for want of training data.
+Four scoreable epitopes make this a smoke test, not an accuracy measurement.
+
+The fuller `06_validate_pipeline.py` run is slower and exercises the whole chain.
+Both now score each positive control against its own restricting allele; an
+earlier version scored every control against a fixed six-allele panel that did
+not contain several of them, which produced seven spurious failures.
 
 ## Live Dashboard
 
