@@ -551,14 +551,17 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### About")
     st.markdown(
-        "Open-source pipeline for designing personalised "
-        "mRNA cancer vaccines for multiple myeloma.\n\n"
-        "[▫  Paper](https://github.com/maxfromtilt/mm-neoantigen-pipeline/blob/main/CLINICAL_REPORT.md) · "
-        "[▪  Code](https://github.com/maxfromtilt/mm-neoantigen-pipeline)"
+        "Open-source research pipeline for exploring neoantigen candidates "
+        "in multiple myeloma.\n\n"
+        "[▫  Report](https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded/blob/main/CLINICAL_REPORT.md) · "
+        "[▪  Code](https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded) · "
+        "[▫  Known limits](https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded#status-what-runs-and-what-does-not)"
     )
     st.markdown(
         '<div class="disclaimer">'
-        '<b>Research Only</b> — Not validated for clinical use.'
+        '<b>Research Only</b> — not validated for clinical use, and not '
+        'patient-specific: HLA typing uses population priors rather than an '
+        'individual genotype.'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -588,8 +591,31 @@ if not df_filtered.empty:
 # MAIN DASHBOARD
 # ══════════════════════════════════════════════════════════════════════
 
-st.markdown(f'<p class="main-header">⟠  Neoantigen Vaccine Design: {selected_patient.upper().replace("_", " ")}</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Personalised mRNA cancer vaccine pipeline for multiple myeloma</p>', unsafe_allow_html=True)
+st.markdown(f'<p class="main-header">⟠  Neoantigen Candidate Explorer: {selected_patient.upper().replace("_", " ")}</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Research prototype for exploring neoantigen candidates in multiple myeloma</p>', unsafe_allow_html=True)
+
+# The footer carries a research-use notice, but almost nobody scrolls that far,
+# and two specific limits need stating before anyone reads a number off this
+# page. First, HLA typing is not implemented: the pipeline uses population
+# frequency priors, so results are NOT specific to an individual even when
+# that individual's mutations are uploaded. Second, nothing here has had any
+# wet-lab validation. Both are easy to miss from a page headed with a patient
+# identifier and a list of ranked "vaccine candidates".
+st.warning(
+    "**Research prototype — results are not patient-specific.** "
+    "HLA typing is not implemented: binding is predicted against a panel of "
+    "common European-ancestry alleles, not this patient's genotype, so the "
+    "rankings below are illustrative rather than personalised. No output here "
+    "has been experimentally validated, and the construct view uses a "
+    "placeholder 3' UTR. This is not a therapy, a treatment plan, or a route "
+    "to either.",
+    icon="⚠️",
+)
+st.caption(
+    "If you have found this page while looking for myeloma treatment for "
+    "yourself or someone else, please speak to your haematology team. Nothing "
+    "on this site can inform a treatment decision."
+)
 
 # ── Key Metrics Row ──────────────────────────────────────────────────
 
@@ -632,11 +658,26 @@ tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # ── Tab 0: Analyse New Patient ────────────────────────────────────────
 
 with tab0:
-    st.subheader("Upload Patient Mutation Data")
+    st.subheader("Upload Mutation Data")
     st.markdown(
-        "Upload a somatic mutation CSV file to design a personalised neoantigen vaccine. "
-        "The pipeline will automatically parse mutations, predict MHC binding across 6 HLA alleles, "
-        "and rank vaccine candidates."
+        "Upload a somatic mutation CSV to generate a ranked list of neoantigen "
+        "candidates. The pipeline parses mutations, predicts MHC binding across "
+        "a fixed panel of 6 common HLA alleles, and ranks the results."
+    )
+    st.info(
+        "**This does not produce a personalised result.** Binding is predicted "
+        "against the same 6 population-frequency alleles for every upload, "
+        "because patient HLA typing is not implemented. Two people with "
+        "identical mutations and different HLA genotypes get identical output "
+        "here, which is not how neoantigen presentation works. Treat the "
+        "ranking as a screening exercise over the mutation list, not as a "
+        "result about a person.",
+        icon="ℹ️",
+    )
+    st.caption(
+        "Do not upload identifiable patient data. This dashboard runs on "
+        "Streamlit Community Cloud, is not a validated environment for "
+        "clinical or personal health data, and has no access controls."
     )
 
     col_upload, col_format = st.columns([1, 1])
@@ -1127,7 +1168,7 @@ st.markdown(
 )
 st.markdown(
     "<center><small>MM Neoantigen Vaccine Designer · "
-    "<a href='https://github.com/maxfromtilt/mm-neoantigen-pipeline'>GitHub</a> · "
+    "<a href='https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded'>GitHub</a> · "
     "© 2026 Robert Doran</small></center>",
     unsafe_allow_html=True,
 )

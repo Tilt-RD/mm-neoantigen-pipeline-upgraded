@@ -10,7 +10,7 @@
 
 **Date:** 29 March 2026
 
-**Repository:** https://github.com/maxfromtilt/mm-neoantigen-pipeline
+**Repository:** https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded
 
 **For Research Purposes Only** — Not validated for clinical use
 
@@ -40,7 +40,7 @@
 
 **Live dashboard:** https://mm-vaccine.streamlit.app
 
-**Full pipeline and data:** https://github.com/maxfromtilt/mm-neoantigen-pipeline
+**Full pipeline and data:** https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded
 
 ---
 
@@ -367,7 +367,7 @@ Existing compassionate use and clinical trial frameworks (HPRA in Ireland, FDA I
 
 The complete pipeline, including all source code, configuration, patient data, and output files, is available at:
 
-**https://github.com/maxfromtilt/mm-neoantigen-pipeline**
+**https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded**
 
 To reproduce:
 ```bash

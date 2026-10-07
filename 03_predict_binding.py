@@ -113,95 +113,34 @@ PSSM_MODELS = {
 
 
 # =============================================================================
-# MHCmix Hybrid Predictor (Enhancement 2)
-# Combines PSSM-based physics with neural-network patterns for improved accuracy
+# Ensemble prediction
+#
+# NOTE ON A REMOVED PREDICTOR
+# Earlier revisions of this file contained a third predictor called "MHCmix",
+# documented as installable via `pip install mhcmix`. No package of that name
+# exists on PyPI, and the code never called one: it silently blended PSSM and
+# MHCflurry output and labelled the result as a separate method. Both the
+# function and its config entry have been removed.
+#
+# If a genuine second predictor is wanted, the real options are NetMHCpan 4.1
+# (free for academic use, requires a separate download and licence click-through),
+# MixMHCpred, or BigMHC. None of them is wired in yet.
 # =============================================================================
-
-
-# MHCmix uses a hybrid PSSM + neural network approximation.
-# MHCmix scores are approximated by blending PSSM and MHCflurry predictions.
-# For production use, install: pip install mhcmix
-
-
-def predict_binding_mhcmix(peptide: str, hla_allele: str) -> Dict:
-    """
-    Predict MHC-I binding using MHCmix hybrid method.
-
-    MHCmix combines:
-    - Position-specific scoring matrix (physics-based)
-    - Neural network pattern recognition (data-driven)
-
-    For production, install mhcmix package. Without it, we approximate
-    the MHCmix hybrid score by blending PSSM (physics) and MHCflurry
-    (neural) predictions with equal weighting.
-
-    Returns:
-        dict with binding_score, ic50_nM, percentile_rank, classification
-    """
-    try:
-        import mhcmix
-        # Production: use actual MHCmix implementation
-        # result = mhcmix.predict(peptide, hla_allele)
-        raise ImportError("mhcmix not installed")
-    except ImportError:
-        pass
-
-    # Approximate MHCmix by blending PSSM and MHCflurry predictions
-    pssm_result = predict_binding_pssm(peptide, hla_allele)
-
-    try:
-        from mhcflurry import Class1AffinityPredictor
-        predictor = Class1AffinityPredictor.load()
-        predictions = predictor.predict_to_dataframe(
-            peptides=[peptide],
-            alleles=[hla_allele],
-        )
-        if not predictions.empty:
-            mhcflurry_ic50 = predictions.iloc[0].get("prediction", 50000)
-            mhcflurry_score = -math.log(max(mhcflurry_ic50, 0.01) / 50000)
-
-            # MHCmix: weighted blend (50% PSSM physics, 50% neural)
-            blended_score = (
-                0.5 * pssm_result["binding_score"] +
-                0.5 * mhcflurry_score
-            )
-            blended_ic50 = 50000 * math.exp(-blended_score * 1.5)
-            blended_ic50 = max(1, min(50000, blended_ic50))
-
-            if blended_ic50 < 50:
-                classification = "strong_binder"
-                percentile_rank = max(0.1, blended_ic50 / 50 * 0.5)
-            elif blended_ic50 < 500:
-                classification = "weak_binder"
-                percentile_rank = 0.5 + (blended_ic50 - 50) / 450 * 1.5
-            else:
-                classification = "non_binder"
-                percentile_rank = 2.0 + (min(blended_ic50, 50000) - 500) / 49500 * 98
-
-            return {
-                "binding_score": round(blended_score, 4),
-                "ic50_nM": round(blended_ic50, 2),
-                "percentile_rank": round(percentile_rank, 2),
-                "classification": classification,
-                "method": "mhcmix_approximation",
-            }
-    except ImportError:
-        pass
-
-    # MHCflurry not available either; fall back to pure PSSM
-    pssm_result["method"] = "pssm_fallback"
-    return pssm_result
 
 
 def ensemble_binding_predict(peptide: str, hla_allele: str, config: dict) -> Dict:
     """
-    Ensemble MHC binding prediction combining multiple predictors.
+    Ensemble MHC binding prediction combining the available predictors.
 
-    Combines MHCflurry, PSSM, and MHCmix predictions using weighted averaging.
-    Ensemble methods improve accuracy by leveraging complementary strengths:
-    - MHCflurry: neural network (learns complex sequence patterns)
-    - PSSM: physics-based (known anchor residue preferences)
-    - MHCmix: hybrid (combines both approaches)
+    Currently combines two predictors with complementary characteristics:
+    - MHCflurry: neural network trained on affinity and mass-spectrometry data
+    - PSSM: the simplified anchor-residue matrices defined above in this file
+
+    The PSSM implementation here is a teaching-grade approximation covering four
+    HLA alleles. It is not comparable in accuracy to a trained predictor, and
+    weighting it at 0.3 against MHCflurry is a choice made for this repository
+    rather than a validated ensemble scheme. Treat ensemble output as
+    exploratory; for anything load-bearing, read the per-predictor columns.
 
     Configuration (config.yaml):
         neoantigen:
@@ -209,9 +148,8 @@ def ensemble_binding_predict(peptide: str, hla_allele: str, config: dict) -> Dic
             enabled: true
             scoring_method: "weighted_rank"  # or "average", "min_ic50"
             weights:
-              mhcflurry: 0.5
+              mhcflurry: 0.7
               pssm: 0.3
-              mhcmix: 0.2
     """
     ensemble_config = config.get("neoantigen", {}).get("ensemble", {})
     if not ensemble_config.get("enabled", False):
@@ -220,7 +158,7 @@ def ensemble_binding_predict(peptide: str, hla_allele: str, config: dict) -> Dic
 
     predictors = ensemble_config.get("predictors", ["mhcflurry", "pssm"])
     weights = ensemble_config.get("weights", {
-        "mhcflurry": 0.5, "pssm": 0.3, "mhcmix": 0.2
+        "mhcflurry": 0.7, "pssm": 0.3
     })
     scoring_method = ensemble_config.get("scoring_method", "weighted_rank")
 
@@ -255,16 +193,6 @@ def ensemble_binding_predict(peptide: str, hla_allele: str, config: dict) -> Dic
             "percentile": pssm_result["percentile_rank"],
         }
         available_predictors.append("pssm")
-
-    # MHCmix
-    if "mhcmix" in predictors:
-        mhcmix_result = predict_binding_mhcmix(peptide, hla_allele)
-        predictions["mhcmix"] = {
-            "ic50_nM": mhcmix_result["ic50_nM"],
-            "binding_score": mhcmix_result["binding_score"],
-            "percentile": mhcmix_result.get("percentile_rank", 50),
-        }
-        available_predictors.append("mhcmix")
 
     if not predictions:
         return pssm_result
@@ -616,7 +544,7 @@ def analyze_hla_coverage(results_df: pd.DataFrame) -> pd.DataFrame:
 def run_binding_predictions(candidates_df: pd.DataFrame, config: dict) -> pd.DataFrame:
     """Run MHC binding predictions for all candidates across HLA alleles.
 
-    Uses ensemble prediction (MHCflurry + PSSM + MHCmix) by default.
+    Uses ensemble prediction (MHCflurry + PSSM) by default.
     Falls back to single-predictor mode if ensemble is disabled.
     """
     neo_config = config.get("neoantigen", {})

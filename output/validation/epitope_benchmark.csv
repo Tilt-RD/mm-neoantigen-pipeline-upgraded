@@ -1,0 +1,9 @@
+gene,mutation,peptide,allele,provenance,counts_towards_total,affinity_nM,presentation_pct,recovered,strong,error
+KRAS,p.G12D,VVVGADGVGK,HLA-A*11:01,published_pmid,True,73.9,0.097,True,False,
+KRAS,p.G12D,VVGADGVGKS,HLA-C*08:02,published_pmid,True,25670.3,65.436,False,False,
+KRAS,p.G12V,KLVVVGAVGV,HLA-A*02:01,published_no_pmid,True,364.6,1.25,True,False,
+KRAS,p.G12V,VVVGAVGVGK,HLA-A*11:01,unsourced,False,43.9,0.059,True,True,
+BRAF,p.V600E,KIGDFGLATEK,HLA-A*02:01,unsourced,False,7245.4,6.948,False,False,
+TP53,p.R175H,HMTEVVRHC,HLA-A*02:01,published_no_pmid,True,1210.8,4.053,False,False,
+NRAS,p.Q61K,ILDTAGKEEY,HLA-A*01:01,computational,False,26.2,0.015,True,True,
+NRAS,p.Q61R,ILDTAGREEY,HLA-A*01:01,computational,False,27.5,0.013,True,True,

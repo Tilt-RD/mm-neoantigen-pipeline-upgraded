@@ -197,6 +197,35 @@ KNOWN_CANCER_HOTSPOTS = {
 # Source: Immune Epitope Database (IEDB), published neoantigen studies.
 # =============================================================================
 
+# IMPORTANT: ON THE REMOVED IEDB IDENTIFIERS
+#
+# Every entry below previously carried an "iedb_id" of the form "IEDB_1001"
+# through "IEDB_1031". Those identifiers were fabricated. Real IEDB epitope
+# IDs are plain integers, and none of these peptides had been looked up in
+# IEDB at all. The field has been removed rather than guessed at; anyone who
+# wants true IEDB cross-references should query the IEDB export API and store
+# the integer IDs it returns.
+#
+# Provenance is now graded explicitly, because it was not uniform and the old
+# structure hid that. The grades are:
+#
+#   published_pmid     a citation with a PubMed ID recorded here. The PMID is
+#                      reproduced as it was found in this file and has NOT been
+#                      independently checked against PubMed.
+#   published_no_pmid  an author-and-year citation with no identifier. Findable
+#                      by hand, not machine-checkable.
+#   unsourced          no usable citation. Retained only as a peptide sequence.
+#   computational      predicted, not experimentally measured. These must NOT be
+#                      used as positive controls for a prediction pipeline: doing
+#                      so tests the predictor against another predictor.
+#
+# One further entry was deleted outright: a KRAS G12D peptide KLVVVGADGV whose
+# source field read "Synthetic benchmark". An invented epitope has no place in a
+# list named KNOWN_IMMUNOGENIC_EPITOPES.
+#
+# Consumers should filter on provenance. Only "published_pmid" and
+# "published_no_pmid" entries represent experimental evidence.
+
 KNOWN_IMMUNOGENIC_EPITOPES = [
     # KRAS G12D peptides
     {
@@ -204,7 +233,7 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "KRAS", "mutation": "p.G12D",
         "hla_restriction": "HLA-A*11:01",
         "assay_type": "T cell", "response": "positive",
-        "iedb_id": "IEDB_1001",
+        "provenance": "published_pmid",
         "source": "Wang et al. 2019, PMID:31537801",
     },
     {
@@ -212,16 +241,8 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "KRAS", "mutation": "p.G12D",
         "hla_restriction": "HLA-C*08:02",
         "assay_type": "T cell", "response": "positive",
-        "iedb_id": "IEDB_1002",
+        "provenance": "published_pmid",
         "source": "Tran et al. 2016, PMID:27959684",
-    },
-    {
-        "peptide": "KLVVVGADGV",
-        "gene": "KRAS", "mutation": "p.G12D",
-        "hla_restriction": "HLA-A*02:01",
-        "assay_type": "MHC binding", "response": "positive",
-        "iedb_id": "IEDB_1003",
-        "source": "Synthetic benchmark",
     },
     # KRAS G12V peptides
     {
@@ -229,7 +250,7 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "KRAS", "mutation": "p.G12V",
         "hla_restriction": "HLA-A*02:01",
         "assay_type": "T cell", "response": "positive",
-        "iedb_id": "IEDB_1004",
+        "provenance": "published_no_pmid",
         "source": "Cafri et al. 2019",
     },
     {
@@ -237,8 +258,8 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "KRAS", "mutation": "p.G12V",
         "hla_restriction": "HLA-A*11:01",
         "assay_type": "T cell", "response": "positive",
-        "iedb_id": "IEDB_1005",
-        "source": "Literature",
+        "provenance": "unsourced",
+        "source": "source field read only 'Literature'; needs a citation or removal",
     },
     # BRAF V600E
     {
@@ -246,8 +267,8 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "BRAF", "mutation": "p.V600E",
         "hla_restriction": "HLA-A*02:01",
         "assay_type": "T cell", "response": "positive",
-        "iedb_id": "IEDB_1010",
-        "source": "Melanoma vaccine trials",
+        "provenance": "unsourced",
+        "source": "source field read only 'Melanoma vaccine trials'; needs a citation or removal",
     },
     # TP53 R175H
     {
@@ -255,7 +276,7 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "TP53", "mutation": "p.R175H",
         "hla_restriction": "HLA-A*02:01",
         "assay_type": "MHC binding", "response": "positive",
-        "iedb_id": "IEDB_1020",
+        "provenance": "published_no_pmid",
         "source": "Lo et al. 2019",
     },
     # NRAS Q61K
@@ -264,8 +285,8 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "NRAS", "mutation": "p.Q61K",
         "hla_restriction": "HLA-A*01:01",
         "assay_type": "MHC binding", "response": "positive",
-        "iedb_id": "IEDB_1030",
-        "source": "Computational prediction + binding assay",
+        "provenance": "computational",
+        "source": "Computational prediction, no experimental measurement recorded",
     },
     # NRAS Q61R
     {
@@ -273,10 +294,13 @@ KNOWN_IMMUNOGENIC_EPITOPES = [
         "gene": "NRAS", "mutation": "p.Q61R",
         "hla_restriction": "HLA-A*01:01",
         "assay_type": "MHC binding", "response": "positive",
-        "iedb_id": "IEDB_1031",
-        "source": "Computational prediction + binding assay",
+        "provenance": "computational",
+        "source": "Computational prediction, no experimental measurement recorded",
     },
 ]
+
+# Provenance grades that count as experimental evidence.
+EXPERIMENTAL_PROVENANCE = {"published_pmid", "published_no_pmid"}
 
 
 # =============================================================================

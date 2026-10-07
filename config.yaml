@@ -21,25 +21,23 @@ gdc:
   # Page size for API requests
   page_size: 100
 
-# --- TCGA Data Integration (Enhancement 1) ---
-# Secondary validation set: TCGA Multiple Myeloma (MM) cohort
-# TCGA data portal: https://portal.gdc.cancer.gov/
+# --- Secondary validation cohort: NOT CONFIGURED ---
+#
+# An earlier revision of this file configured a cohort called "TCGA-MM", with
+# TCGA-BRCA and TCGA-LUAD listed as substitutes on the grounds of a "similar
+# immune landscape". Both parts were wrong and have been removed:
+#
+#   1. TCGA has no multiple myeloma project. There is no TCGA-MM in the GDC.
+#      Myeloma in the GDC is MMRF-COMMPASS, which is already the primary cohort
+#      configured above.
+#   2. Breast and lung adenocarcinoma cannot validate myeloma neoantigen calls.
+#      They differ in mutational burden, driver landscape and antigen biology.
+#
+# If an independent cohort is wanted, the realistic options are the MMRF interim
+# analysis releases (different freeze, same study) or myeloma exomes held in
+# dbGaP, which require an approved data access request. Neither is wired in.
 tcga:
-  enabled: true
-  project_id: "TCGA-MM"  # TCGA uses TCGA-XX format; MM is TCGA study code for MM
-  cancer_type: "MM"  # Multiple Myeloma
-  # Use TCGA SKCM (skin cutaneous melanoma) as proxy MM validation if no MM cohort available
-  # For actual MM validation: TCGA has limited MM data; use MMRF as primary, TCGA-MM as secondary
-  alternative_projects:
-    - "TCGA-BRCA"  # Breast cancer - similar immune landscape
-    - "TCGA-LUAD"  # Lung adenocarcinoma - checkpoint biology
-  base_url: "https://api.gdc.cancer.gov"
-  max_cases: 200
-  data_categories:
-    - "Simple Nucleotide Variation"
-    - "Transcriptome Profiling"
-  merge_with_mmrf: true  # Merge TCGA mutations with MMRF data for combined analysis
-  validation_weight: 0.3  # Weight for TCGA in combined analysis (MMRF primary)
+  enabled: false
 
 # --- Mutation Filtering ---
 mutations:
@@ -72,31 +70,30 @@ mutations:
     - "ATM"
     - "ATR"
     - "PRDM1"
-  # dNdScov selection pressure scoring (Enhancement 3)
-  # Published dNdScov cutoffs for driver gene oncogenicity
+  # --- Selection pressure scoring: DISABLED, PREVIOUS VALUES WERE NOT REAL ---
+  #
+  # This block previously carried fifteen per-gene numeric scores (KRAS 3.2,
+  # TP53 4.1, and so on) described as "known dNdScov values from published
+  # literature". Those numbers had no source and should not be trusted:
+  #
+  #   - dndscv (Martincorena et al.) is software that computes dN/dS ratios from
+  #     a cohort's mutation calls. It does not publish a lookup table of
+  #     per-gene constants, and the values that were here did not come from any
+  #     run of it.
+  #   - The scores fed a bonus in the candidate priority score, so any ranking
+  #     produced with them was shaped by invented numbers.
+  #
+  # To restore this feature properly: run dndscv against the MMRF MAF and write
+  # its per-gene output here, or drop dN/dS entirely and take driver status from
+  # OncoKB or IntOGen, which both publish citable gene lists.
+  #
+  # Until then this stays disabled, and driver prioritisation falls back to the
+  # plain driver_genes membership list above.
   dndscov:
-    enabled: true
-    # dNdScov scores > 1.0 indicate positive selection (driver)
-    # Scores > 2.0 indicate strong driver (oncogenic)
+    enabled: false
     driver_cutoff: 1.0
     strong_driver_cutoff: 2.0
-    # Genes with known dNdScov values from published literature
-    gene_scores:
-      KRAS: 3.2
-      NRAS: 2.8
-      BRAF: 3.5
-      TP53: 4.1
-      DIS3: 2.1
-      FAM46C: 1.9
-      TRAF3: 1.5
-      RB1: 2.3
-      CYLD: 1.4
-      MAX: 1.6
-      IRF4: 1.8
-      FGFR3: 2.2
-      ATM: 1.7
-      ATR: 1.5
-      PRDM1: 1.3
+    gene_scores: {}
   # Tumor expression filtering (Enhancement 5)
   expression_filter:
     enabled: true
@@ -164,13 +161,16 @@ neoantigen:
     predictors:
       - "mhcflurry"        # Neural network-based (recommended, install via pip)
       - "pssm"            # Position-specific scoring matrix (built-in fallback)
-      - "mhcmix"          # Hybrid PSSM + neural network (if installed)
+    # A third predictor, "mhcmix", was listed here with weight 0.2 and an
+    # install instruction. No such package exists on PyPI; the code was blending
+    # the two predictors below and relabelling the result. Both are now removed.
+    # A real second predictor would be NetMHCpan 4.1, MixMHCpred or BigMHC.
+    #
     # Scoring method: "average" (mean IC50), "weighted_rank" (rank-average), "min_ic50" (best-case)
     scoring_method: "weighted_rank"
     weights:
-      mhcflurry: 0.5    # Primary predictor - neural network
-      pssm: 0.3         # Physics-based fallback
-      mhcmix: 0.2       # Hybrid (if available)
+      mhcflurry: 0.7    # Primary predictor - neural network
+      pssm: 0.3         # Simplified built-in matrices, 4 alleles only
     # Only use MHCflurry if available; fall back to PSSM for all if not
     require_mhcflurry: false
 
