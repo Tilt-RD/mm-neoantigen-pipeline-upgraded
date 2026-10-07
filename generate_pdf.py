@@ -108,7 +108,7 @@ def build_pdf():
         "<b>Date:</b> 29 March 2026", styles['Body']
     ))
     story.append(Paragraph(
-        "<b>Repository:</b> https://github.com/maxfromtilt/mm-neoantigen-pipeline", styles['Body']
+        "<b>Repository:</b> https://github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded", styles['Body']
     ))
     story.append(Paragraph(
         "<b>Status:</b> For Research Purposes Only — Not validated for clinical use", styles['Body']
@@ -124,7 +124,7 @@ def build_pdf():
         ["<b>Key results</b>", "2 MMRF CoMMpass patients: 156 and 140 binders, 24 and 18 strong binders (IC50 &lt; 50 nM). DIS3 I85T ranked #1 (MM driver, clonal, expressed). IDH2 R140Q at 47 nM (oncogenic hotspot, CCF 0.99). 7 dual MHC-I/MHC-II binders found."],
         ["<b>What we need</b>", "A clinician or researcher willing to review the methodology and advise whether this warrants experimental validation (ELISpot immunogenicity testing)."],
         ["<b>How to use</b>", "Visit <b>mm-vaccine.streamlit.app</b> — upload a somatic mutation CSV (gene_symbol, aa_change columns) and the pipeline analyses it automatically. Pre-computed results for 5 MMRF CoMMpass patients available to explore immediately."],
-        ["<b>Code &amp; data</b>", "github.com/maxfromtilt/mm-neoantigen-pipeline"],
+        ["<b>Code &amp; data</b>", "github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded"],
     ]
 
     summary_table_data = [[Paragraph(row[0], styles['CellBold']), Paragraph(row[1], styles['CellStyle'])] for row in summary_text]
@@ -423,7 +423,7 @@ def build_pdf():
     story.append(Spacer(1, 8))
     story.append(Paragraph(
         "<b>Correspondence:</b> robert.doran@tilt.ie  |  "
-        "<b>Repository:</b> github.com/maxfromtilt/mm-neoantigen-pipeline",
+        "<b>Repository:</b> github.com/Tilt-RD/mm-neoantigen-pipeline-upgraded",
         styles['Small']
     ))
 
